@@ -10,12 +10,11 @@ import (
 )
 
 const (
-	auth_token = "xNGZ9zP8mwTVop90sDxJdePIsRniuQb7j9PuDGuU"
-	base_url   = "https://api.hipchat.com/v2/"
+	base_url = "https://api.hipchat.com/v2/"
 )
 
 type Hip struct {
-	auth_token string
+	Auth_token string
 }
 
 type Room struct {
@@ -52,7 +51,7 @@ func (hip *Hip) GetAllRooms() (map[string]Room, error) {
 	client := http.Client{
 		Transport: &transport,
 	}
-	resp, err := client.Get(base_url + "room" + "?auth_token=" + auth_token)
+	resp, err := client.Get(base_url + "room" + "?auth_token=" + hip.Auth_token)
 	if err != nil {
 		return rooms, err
 	}
