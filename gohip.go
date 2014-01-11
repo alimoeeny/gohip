@@ -71,9 +71,10 @@ func (hip *Hip) PostToRoom(room Room, body string) error {
 		Transport: &transport,
 	}
 	payload := struct {
-		Message string `json:"message"`
-		Color   string `json:"color"`
-	}{body, "red"}
+		Message        string `json:"message"`
+		Color          string `json:"color"`
+		Message_format string `json:"message_format"`
+	}{body, "red", "text"}
 	buf, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error converting the message to json payload:%v\n", err)
