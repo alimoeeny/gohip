@@ -1,8 +1,11 @@
 package gohip
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -18,31 +21,23 @@ type Hip struct {
 }
 
 type Room struct {
-	id   string
-	link string
+	Name             string
+	Id               string
+	Link             string
+	Created          time.Time
+	Guest_access_url string
+	Is_archived      bool
+	Last_active      time.Time
+	Webhook          string
+	Privacy          string
+	Topic            string
+	Xmpp_jid         string
+	//owner            user
+	//participants     []user
 }
 
 func dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, time.Duration(2*time.Second))
-}
-
-func instanceId() string {
-	transport := http.Transport{Dial: dialTimeout}
-	client := http.Client{
-		Transport: &transport,
-	}
-	resp, err := client.Get("http://169.254.169.254/latest/meta-data/instance-id")
-	if err != nil {
-		return "unknown"
-	} else {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return "unknown"
-		} else {
-			return string(body)
-		}
-	}
 }
 
 func (hip *Hip) GetAllRooms() (map[string]Room, error) {
@@ -64,8 +59,32 @@ func (hip *Hip) GetAllRooms() (map[string]Room, error) {
 	}
 	for _, v := range jsonresponse["items"].([]interface{}) {
 		vv := v.(map[string]interface{})
-		room := Room{id: strconv.FormatFloat(vv["id"].(float64), 'f', 0, 64), link: vv["links"].(map[string]interface{})["self"].(string)}
-		rooms[room.id] = room
+		room := Room{Id: strconv.FormatFloat(vv["id"].(float64), 'f', 0, 64), Link: vv["links"].(map[string]interface{})["self"].(string)}
+		rooms[room.Id] = room
 	}
 	return rooms, err
+}
+
+func (hip *Hip) PostToRoom(room Room, body string) error {
+	transport := http.Transport{Dial: dialTimeout}
+	client := http.Client{
+		Transport: &transport,
+	}
+	payload := struct {
+		Message string `json:"message"`
+		Color   string `json:"color"`
+	}{body, "red"}
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error converting the message to json payload:%v\n", err)
+		return err
+	}
+	resp, err := client.Post(base_url+"room/"+room.Id+"/notification?auth_token="+hip.Auth_token, "application/json", bytes.NewReader(buf))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 399 {
+		return errors.New(resp.Status)
+	}
+	return nil
 }
